@@ -1,0 +1,1 @@
+C:\Users\nicke\source\repos\GameTranslator\zlib-master\contrib\vstudio\vc14\x64\Release\minizip.exe
