@@ -41,7 +41,7 @@ workspace (workspaceName)
 
     filter {}
 
-    targetdir "_bin/%{cfg.buildcfg}/"
+    targetdir "bin/%{cfg.buildcfg}/"
 
     startproject(workspaceName)
 
