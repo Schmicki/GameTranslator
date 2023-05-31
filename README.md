@@ -1,4 +1,4 @@
-# GameTranslator
+# Game Translator
 
  An allround tool to translate video games.
 
