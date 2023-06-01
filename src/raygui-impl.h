@@ -24,6 +24,8 @@ int GuiInvisibleButtonEx(Rectangle bounds);
 
 Rectangle ClampBounds(Rectangle child, Rectangle parent);
 
+float ScaleToFit(float childWidth, float childHeight, float parentWidth, float parentHeight);
+
 int IntegerAlignUp(int val, int mod);
 
 int IntegerAlignDown(int val, int mod);

@@ -103,56 +103,131 @@ cleanupName:
 	free(name);
 }
 
+static void TrimOverlaySetStyleDefault(int iconSize)
+{
+	GuiSetStyle(DEFAULT, TEXT_SIZE, iconSize);
+	GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, 0x00000000);
+	GuiSetStyle(DEFAULT, TEXT_COLOR_FOCUSED, 0x00000000);
+	GuiSetStyle(DEFAULT, BACKGROUND_COLOR, 0xFFFFFFFF);
+	GuiSetStyle(DEFAULT, BORDER_COLOR_NORMAL, 0x000000FF);
+	GuiSetStyle(DEFAULT, BORDER_COLOR_FOCUSED, 0x000000FF);
+	GuiSetStyle(DEFAULT, BORDER_COLOR_PRESSED, 0x000000FF);
+	GuiSetStyle(DEFAULT, BORDER_COLOR_DISABLED, 0x000000FF);
+	GuiSetStyle(DEFAULT, LINE_COLOR, 0x777777FF);
+
+	GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
+	GuiSetStyle(TEXTBOX, BORDER_COLOR_NORMAL, 0xFFFFFFFF);
+	GuiSetStyle(TEXTBOX, BORDER_COLOR_FOCUSED, 0xFFFFFFFF);
+	GuiSetStyle(TEXTBOX, BORDER_COLOR_PRESSED, 0xFFFFFFFF);
+	GuiSetStyle(TEXTBOX, BORDER_COLOR_DISABLED, 0xFFFFFFFF);
+
+	GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, 0xFFFFFFFF);
+	GuiSetStyle(BUTTON, BORDER_COLOR_NORMAL, 0xFFFFFFFF);
+	GuiSetStyle(BUTTON, BASE_COLOR_FOCUSED, 0xccecffFF);
+	GuiSetStyle(BUTTON, BORDER_COLOR_FOCUSED, 0xccecffFF);
+	GuiSetStyle(BUTTON, BASE_COLOR_PRESSED, 0x8bd1fcFF);
+	GuiSetStyle(BUTTON, BORDER_COLOR_PRESSED, 0x8bd1fcFF);
+}
+
+static void TrimOverlaySetStyleInput(int iconSize)
+{
+
+	GuiSetStyle(TEXTBOX, BORDER_COLOR_NORMAL, 0x777777FF);
+	GuiSetStyle(TEXTBOX, BORDER_COLOR_FOCUSED, 0x777777FF);
+	GuiSetStyle(TEXTBOX, BORDER_COLOR_PRESSED, 0x777777FF);
+	GuiSetStyle(TEXTBOX, BORDER_COLOR_DISABLED, 0x777777FF);
+
+	GuiSetStyle(TEXTBOX, BASE_COLOR_NORMAL, 0xFFFFFFFF);
+	GuiSetStyle(TEXTBOX, BASE_COLOR_FOCUSED, 0xFFFFFFFF);
+	GuiSetStyle(TEXTBOX, BASE_COLOR_PRESSED, 0xFFFFFFFF);
+	GuiSetStyle(TEXTBOX, BASE_COLOR_DISABLED, 0xFFFFFFFF);
+
+	GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
+}
+
 int GuiTrimOverlay(FileManagerState* state, TrimOverlayState* trim, Rectangle bounds)
 {
 	const int textSize = (int)(gIconSize * gScale);
-	const int sliderWidth = 200;
-	const int sliderHeight = textSize + gPadding * 2;
-	const int windowWidth = sliderWidth + gPadding * 2;
-	const int windowHeight = RAYGUI_WINDOWBOX_STATUSBAR_HEIGHT + sliderHeight * 3 + gPadding * 4;
+	const int buttonSize = textSize + gPadding * 2;
+	const int windowWidth = (int)((float)600 * gScale);
+	const int windowHeight = (int)((float)gPadding * 6.0f + (float)buttonSize * 4.0f);
 
-	Rectangle window = {
+	Rectangle item = {
 		bounds.x = bounds.width / 2 - (float)windowWidth / 2,
 		bounds.y = bounds.height / 2 - (float)windowHeight / 2,
 		bounds.width = (float)windowWidth,
 		bounds.height = (float)windowHeight
 	};
 
-	Rectangle inputBox = {
-		window.x + gPadding,
-		window.y + RAYGUI_WINDOWBOX_STATUSBAR_HEIGHT + gPadding,
-		(float)sliderWidth,
-		(float)sliderHeight
-	};
+	int itmp;
+	char inputText[16];
+	int edit = trim->edit;
 
-	if (GuiWindowBox(window, "Trimming"))
+	TrimOverlaySetStyleDefault(textSize);
+
+	/* Draw background */
+	itmp = (int)item.y + buttonSize + gPadding * 2;
+
+	GuiPanel(item, NULL);
+	DrawLine((int)item.x, itmp, (int)item.x + (int)item.width, itmp, GetColor(GuiGetStyle(DEFAULT,
+		LINE_COLOR)));
+
+	/* Draw title */
+	item.x += (float)gPadding;
+	item.y += (float)gPadding;
+	item.width -= (float)gPadding * 2;
+	item.height = (float)buttonSize;
+
+	GuiTextBox(item, "Trim File", textSize, 0);
+
+	GuiEnableTooltip();
+
+	/* Draw cancel button */
+	itmp = (int)item.x - gPadding;
+	item.x = (float)itmp + (float)((windowWidth / 3) * 1 - buttonSize / 2);
+	item.y += (int)((float)gPadding * 4.0f + (float)buttonSize * 3.0f);
+	item.width = (float)buttonSize;
+	item.height = (float)buttonSize;
+
+	if (GuiIconButtonEx(item, "Cancel", gIcons, gIconSize, gPadding, ICON_CUSTOM_CLOSE, gScale))
 	{
 		CloseTrimOverlay(state, trim);
 		return 1;
 	}
 
-	char inputText[16];
-	int edit = trim->edit;
+	item.x += (float)windowWidth / 3.0f;
 
-	inputText[IntegerToString(trim->front, inputText)] = 0;
-	edit = GuiTextBox(inputBox, inputText, 16, edit == 1) ? (edit == 1 ? 0 : 1) : edit;
-	trim->front = TextToInteger(inputText);
-	inputBox.y += sliderHeight + gPadding;
-
-	inputText[IntegerToString(trim->back, inputText)] = 0;
-	edit = GuiTextBox(inputBox, inputText, 16, edit == 2) ? (edit == 2 ? 0 : 2) : edit;
-	trim->back = TextToInteger(inputText);
-	inputBox.y += sliderHeight + gPadding;
-
-	trim->edit = edit;
-
-	if (GuiButtonEx(inputBox, "Trim"))
+	if (GuiIconButtonEx(item, "Trim", gIcons, gIconSize, gPadding, ICON_CUSTOM_TRIM, gScale))
 	{
 		TrimFile(trim);
 		ReloadFilesAndTypes(state);
 		CloseTrimOverlay(state, trim);
 		return 1;
 	}
+
+	/* Draw back trim input */
+	item.x = itmp + (float)gPadding;
+	item.y -= item.height + (float)gPadding;
+	item.width = (float)(windowWidth - gPadding * 2);
+	inputText[IntegerToString(trim->back, inputText)] = 0;
+
+	TrimOverlaySetStyleInput(textSize);
+	GuiSetTooltip("Number of bytes to cut from back of file");
+	edit = GuiTextBox(item, inputText, 16, edit == 2) ? (edit == 2 ? 0 : 2) : edit;
+
+	trim->back = TextToInteger(inputText);
+
+	/* Draw front trim input */	
+	item.y -= (float)(buttonSize + gPadding);
+	inputText[IntegerToString(trim->front, inputText)] = 0;
+
+	GuiSetTooltip("Number of bytes to cut from front of file");
+	edit = GuiTextBox(item, inputText, 16, edit == 1) ? (edit == 1 ? 0 : 1) : edit;
+
+	trim->front = TextToInteger(inputText);
+	trim->edit = edit;
+
+	GuiDisableTooltip();
 
 	if (IsKeyPressed(KEY_TAB) && IsKeyDown(KEY_LEFT_CONTROL))
 	{

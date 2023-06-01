@@ -509,6 +509,7 @@ static void FortmatVitaGxtViewImage(FileManagerState* state, int index)
 
 	img = FormatVitaGxtLoadImage(path, 0);
 	AddActivity(OpenImageViewer(GetFileName(path), img), gActivityCount);
+	UnloadImage(img);
 	gCurrentActivity = gActivityCount - 1;
 }
 

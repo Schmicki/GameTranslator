@@ -27,6 +27,10 @@
 | .gxt   | Image format used on PS Vita                                                                  |
 | .gz    | GZip Archive                                                                                  |
 | .dat   | Archive format used in: Saenai Heroine no Sodatekata: 〜blessing flowers〜 & Toradora Portable! |
+| .png   | Image format                                                                                  |
+| .jpg   | Image format                                                                                  |
+| .bmp   | Image format                                                                                  |
+| .gif   | Image format                                                                                  |
 
 ## Supported Games
 

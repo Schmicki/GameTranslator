@@ -1,14 +1,11 @@
-#include "file-formats.h"
+#pragma once
 
-int IsFormatPng(const char* path, const char* name, const char* extension, const char* data, int length)
-{
-	return extension && strcmp(extension, ".png") == 0;
-}
+#include "tools/file-explorer/file-explorer.h"
 
-static FileFormat formatPng = {
-	"Png Image",
-	FILE_TYPE_IMAGE,
-	ICON_CUSTOM_FILE_IMAGE,
-	&IsFormatPng,
-	NULL
-};
+int IsFormatPng(const char* path, const char* name, const char* extension, const char* data, int length);
+
+Image FormatPngLoadImage(const char* src);
+
+/*************************************************************************************************/
+
+extern FileFormat formatPng;

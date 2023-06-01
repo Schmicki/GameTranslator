@@ -5,6 +5,7 @@
 typedef struct ImageViewerState
 {
     Texture2D texture;
+	float scale;
 } ImageViewerState;
 
 /*************************************************************************************************/
@@ -50,18 +51,28 @@ static void DrawImageViewer(Activity* activity, Rectangle bounds)
 
 	ImageViewerState* viewer = (ImageViewerState*)activity->data;
 
+	if (CheckCollisionPointRec(GetMousePosition(), bounds))
+	{
+		float wheelMovement = GetMouseWheelMove();
+		
+		if (wheelMovement > 0)
+			viewer->scale += 0.05f;
+		else if (wheelMovement < 0)
+			viewer->scale -= 0.05f;
+
+		viewer->scale = Clamp(viewer->scale, 0.05f, 16.0f);
+	}
+
 	BeginScissorMode((int)bounds.x, (int)bounds.y, (int)bounds.width, (int)bounds.height);
 
 	/* Draw Background */
-
 	DrawRectangle((int)bounds.x, (int)bounds.y, (int)bounds.width, (int)bounds.height, BLACK);
-	
+
 	/* Draw Texture */
+	pos.x = (float)(int)(bounds.x + bounds.width / 2.0f - ((float)viewer->texture.width * viewer->scale) / 2.0f);
+	pos.y = (float)(int)(bounds.y + bounds.height / 2.0f - ((float)viewer->texture.height * viewer->scale) / 2.0f);
 
-	pos.x = (float)((int)bounds.x + (int)bounds.width / 2 - ((int)(viewer->texture.width) / 2));
-	pos.y = (float)((int)bounds.y + (int)bounds.height / 2 - ((int)(viewer->texture.height) / 2));
-
-	DrawTextureEx(viewer->texture, pos, 0.0f, 1.0f, RAYWHITE);
+	DrawTextureEx(viewer->texture, pos, 0.0f, viewer->scale, RAYWHITE);
 
 	EndScissorMode();
 }
@@ -76,21 +87,19 @@ Activity OpenImageViewer(const char* name, Image image)
 		return activity;
 
 	/* Image Viewer Setup */
-
 	viewer = malloc(sizeof(ImageViewerState));
 
 	if (viewer == NULL)
 		return activity;
 
 	/* Load Texture */
-
 	viewer->texture = LoadTextureFromImage(image);
+	viewer->scale = 1.0f;
 
 	if (viewer->texture.id == 0)
 		goto cleanViewer;
 
 	/* Activity Setup */
-
 	length = (int)strlen(name) + 1;
 	activity.name = malloc(length);
 

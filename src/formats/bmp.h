@@ -1,14 +1,11 @@
-#include "file-formats.h"
+#pragma once
 
-int IsFormatBmp(const char* path, const char* name, const char* extension, const char* data, int length)
-{
-	return extension && strcmp(extension, ".rar") == 0;
-}
+#include "tools/file-explorer/file-explorer.h"
 
-static FileFormat formatBmp = {
-	"Bmp Image",
-	FILE_TYPE_IMAGE,
-	ICON_CUSTOM_FILE_IMAGE,
-	&IsFormatBmp,
-	NULL
-};
+int IsFormatBmp(const char* path, const char* name, const char* extension, const char* data, int length);
+
+Image FormatBmpLoadImage(const char* src);
+
+/*************************************************************************************************/
+
+extern FileFormat formatBmp;

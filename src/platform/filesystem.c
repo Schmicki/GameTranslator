@@ -127,27 +127,59 @@ int GetAbsolutePath(const char* relativePath, int bufferSize, char* buffer)
 
 int GetUniqueFileName(char* path, int bufferSize)
 {
-	int length = (int)strlen(path) + 1;
-	int maxDigits = bufferSize - length;
-	char* extra = path + (length - 1);
+	int extensionLength, pathSize, freeSize;
+	char* appendix, *extension;
 
 	if (!FileExists(path))
 		return 1;
 
-	for (int i = 0, d = 0; i < maxDigits; i++)
-	{
-		extra[d++] = '1';
-		while (d <= i) extra[d++] = '0';
-		extra[d--] = 0;
+	pathSize = (int)strlen(path) + 1;
+	freeSize = bufferSize - pathSize;
 
+	if (freeSize < 4)
+		return 0;
+
+	extension = (char*)GetFileExtension(path);
+
+	if (extension)
+	{
+		extensionLength = (int)strlen(extension) + 1;
+	}
+	else
+	{
+		extension = path + pathSize - 1;
+		extensionLength = 1;
+	}
+
+	memmove(extension + 3, extension, extensionLength++);
+	memcpy(extension, " ()", 3);
+	freeSize -= 3;
+	
+	extension += 2;
+	appendix = extension;
+
+	/* test names */
+
+	for (int i = 0, d = 0; i < freeSize; i++)
+	{
+		/* move extension to the back */
+		memmove(extension + 1, extension, extensionLength);
+		extension++;
+
+		/* initialize digits */
+		while (d <= i)
+		{
+			appendix[d++] = (d == 0 && i > 0) ? '1' : '0';
+		}
+
+		d--;
 test:
 		if (!FileExists(path))
 			return 1;
-
 next:
-		if (extra[d]++ == '9')
+		if (appendix[d]++ == '9')
 		{
-			extra[d] = '0';
+			appendix[d] = '0';
 			
 			if (d-- == 0)
 			{

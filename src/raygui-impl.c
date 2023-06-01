@@ -163,6 +163,13 @@ Rectangle ClampBounds(Rectangle child, Rectangle parent)
     return child;
 }
 
+float ScaleToFit(float childWidth, float childHeight, float parentWidth, float parentHeight)
+{
+    float widthScale = parentWidth / childWidth;
+    float heightScale = parentHeight / childHeight;
+    return widthScale < heightScale ? widthScale : heightScale;
+}
+
 int IntegerAlignUp(int val, int mod)
 {
     int rest = val & (mod - 1);

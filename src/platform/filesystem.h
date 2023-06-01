@@ -12,6 +12,7 @@ void UnloadLogicalDriveFiles(FilePathList files);
 
 int GetAbsolutePath(const char* relativePath, int bufferSize, char* buffer);
 
+/* The buffer should at least be 5 bytes larger that the path. */
 int GetUniqueFileName(char* path, int bufferSize);
 
 /*
