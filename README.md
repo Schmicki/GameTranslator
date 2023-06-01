@@ -41,8 +41,8 @@
 ## Screenshots
 
 ![image](resources/Screenshot.png)
-![image](resources/Screenshot 2.png)
-![image](resources/Screenshot 4.png)
+![image](resources/Screenshot%202.png)
+![image](resources/Screenshot%204.png)
 
 ## License
 
