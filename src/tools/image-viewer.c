@@ -17,32 +17,6 @@ void CloseImageViewer(Activity* activity)
 	UnloadTexture(state->texture);
 }
 
-static void ImageViewerSetStyleDefault(int iconSize)
-{
-	GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_NORMAL, 0xFFFFFFFF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_FOCUSED, 0xFFFFFFFF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_PRESSED, 0xFFFFFFFF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_DISABLED, 0xFFFFFFFF);
-
-	GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, 0xFFFFFFFF);
-	GuiSetStyle(BUTTON, BORDER_COLOR_NORMAL, 0xFFFFFFFF);
-	GuiSetStyle(BUTTON, BASE_COLOR_FOCUSED, 0xccecffFF);
-	GuiSetStyle(BUTTON, BORDER_COLOR_FOCUSED, 0xccecffFF);
-	GuiSetStyle(BUTTON, BASE_COLOR_PRESSED, 0x8bd1fcFF);
-	GuiSetStyle(BUTTON, BORDER_COLOR_PRESSED, 0x8bd1fcFF);
-
-	GuiSetStyle(LISTVIEW, BORDER_COLOR_NORMAL, 0xFFFFFF00);
-	GuiSetStyle(LISTVIEW, BORDER_COLOR_FOCUSED, 0xFFFFFF00);
-	GuiSetStyle(LISTVIEW, BORDER_COLOR_PRESSED, 0xFFFFFF00);
-	GuiSetStyle(LISTVIEW, BORDER_COLOR_DISABLED, 0xFFFFFF00);
-
-	GuiSetStyle(DEFAULT, TEXT_SIZE, iconSize);
-	GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, 0x00000000);
-	GuiSetStyle(DEFAULT, TEXT_COLOR_FOCUSED, 0x00000000);
-	GuiSetStyle(DEFAULT, BACKGROUND_COLOR, 0xFFFFFFFF);
-}
-
 static void DrawImageViewer(Activity* activity, Rectangle bounds)
 {
 	const int textSize = (int)(gIconSize * gScale);

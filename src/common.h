@@ -10,6 +10,7 @@
 #include "raygui.h"
 #include "raygui-impl.h"
 #include "string-tools.h"
+#include "style.h"
 
 /*************************************************************************************************/
 

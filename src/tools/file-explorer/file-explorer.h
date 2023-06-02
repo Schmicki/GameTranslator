@@ -20,12 +20,14 @@ struct Overlay
 struct FileManagerState
 {
 	char* path;					/* Current directory path */
+	char* filter;				/* Current directory path */
 	Vector2 scroll;				/* File viwer scroll position */
 	FilePathList files;			/* List of files in current directory */
 	FileFormat** formats;		/* List of files formats */
 	double* selected;
 	int lastSelected;
 
+	int editFilter;
 	int renameIndex;
 	char* rename;
 

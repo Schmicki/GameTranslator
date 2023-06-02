@@ -35,32 +35,6 @@ void FillHexChar(unsigned char i, char* txt)
 	txt[2] = 0;
 }
 
-static void HexEditorSetStyleDefault(int iconSize)
-{
-	GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_NORMAL, 0xFFFFFFFF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_FOCUSED, 0xFFFFFFFF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_PRESSED, 0xFFFFFFFF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_DISABLED, 0xFFFFFFFF);
-
-	GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, 0xFFFFFFFF);
-	GuiSetStyle(BUTTON, BORDER_COLOR_NORMAL, 0xFFFFFFFF);
-	GuiSetStyle(BUTTON, BASE_COLOR_FOCUSED, 0xccecffFF);
-	GuiSetStyle(BUTTON, BORDER_COLOR_FOCUSED, 0xccecffFF);
-	GuiSetStyle(BUTTON, BASE_COLOR_PRESSED, 0x8bd1fcFF);
-	GuiSetStyle(BUTTON, BORDER_COLOR_PRESSED, 0x8bd1fcFF);
-
-	GuiSetStyle(LISTVIEW, BORDER_COLOR_NORMAL, 0xFFFFFF00);
-	GuiSetStyle(LISTVIEW, BORDER_COLOR_FOCUSED, 0xFFFFFF00);
-	GuiSetStyle(LISTVIEW, BORDER_COLOR_PRESSED, 0xFFFFFF00);
-	GuiSetStyle(LISTVIEW, BORDER_COLOR_DISABLED, 0xFFFFFF00);
-
-	GuiSetStyle(DEFAULT, TEXT_SIZE, iconSize);
-	GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, 0x00000000);
-	GuiSetStyle(DEFAULT, TEXT_COLOR_FOCUSED, 0x00000000);
-	GuiSetStyle(DEFAULT, BACKGROUND_COLOR, 0xFFFFFFFF);
-}
-
 static void DrawHexViewer(HexEditorState* editor, Rectangle bounds)
 {
 	if (editor->data == NULL)
@@ -75,19 +49,24 @@ static void DrawHexViewer(HexEditorState* editor, Rectangle bounds)
 	int first, last;
 
 	Rectangle content, view;
+	Color textColor, secondaryTextColor;
 	Vector2 pos;
 
-	HexEditorSetStyleDefault(textSize);
+	GuiSetStyleDefault();
+
+	textColor = GetColor(gTextColor);
+	secondaryTextColor = ColorBrightness(textColor, (((float)textColor.r + (float)textColor.g +
+		(float)textColor.b) / 3.0f > 128.0f) ? -0.4f : 0.4f);
 
 	content.x = 0;
 	content.y = 0;
 	content.width = bounds.width - GuiGetStyle(LISTVIEW, SCROLLBAR_WIDTH) - padding;
-	content.height = lines * (float)height + (float)height;
+	content.height = (float)lines * (float)height + (float)height * 2.0f;
 
 	view = GuiScrollPanel(bounds, NULL, content, &editor->scroll);
 
 	first = (int)(-editor->scroll.y / (float)height);
-	last = (int)(first + view.height / (float)height);
+	last = (int)(first + view.height / (float)height) - 1;
 
 	pos.x = view.x + padding + (8 * charWidth),
 	pos.y = view.y;
@@ -100,12 +79,12 @@ static void DrawHexViewer(HexEditorState* editor, Rectangle bounds)
 	{
 		char txt[16];
 		FillHexChar(i, txt);
-		DrawTextEx(gMonoFont, txt, pos, (float)textSize, 0, DARKGRAY);
+		DrawTextEx(gMonoFont, txt, pos, (float)textSize, 0, secondaryTextColor);
 		pos.x += height;
 	}
 
 	pos.x += charWidth;
-	DrawTextEx(gMonoFont, "Text", pos, (float)textSize, 0, DARKGRAY);
+	DrawTextEx(gMonoFont, "Text", pos, (float)textSize, 0, secondaryTextColor);
 
 	pos.x = view.x + padding;
 	pos.y += height;
@@ -117,25 +96,25 @@ static void DrawHexViewer(HexEditorState* editor, Rectangle bounds)
 
 		/* draw line number */
 		FillHexInt(i * cpl, txt);
-		DrawTextEx(gMonoFont, txt, pos, (float)textSize, 0, DARKGRAY);
+		DrawTextEx(gMonoFont, txt, pos, (float)textSize, 0, secondaryTextColor);
 		pos.x += 8 * charWidth;
 
 		/* draw hex line */
-		for (int j = 0; j < cpl && (i * j + j) < editor->size; j++)
+		for (int j = 0; j < cpl && (i * cpl + j) < editor->size; j++)
 		{
 			FillHexChar(editor->data[i * cpl + j], txt);
-			DrawTextEx(gMonoFont, txt, pos, (float)textSize, 0, GRAY);
+			DrawTextEx(gMonoFont, txt, pos, (float)textSize, 0, textColor);
 			pos.x += height;
 		}
 
 		pos.x = (view.x + padding) + (8 * charWidth) + (height * editor->charsPerLine + charWidth);
 
 		/* draw text line */
-		for (int j = 0; j < cpl && (i * j + j) < editor->size; j++)
+		for (int j = 0; j < cpl && (i * cpl + j) < editor->size; j++)
 		{
 			txt[0] = editor->data[i * cpl + j];
 			txt[1] = 0;
-			DrawTextEx(gMonoFont, txt, pos, (float)textSize, 0, GRAY);
+			DrawTextEx(gMonoFont, txt, pos, (float)textSize, 0, textColor);
 			pos.x += charWidth;
 		}
 

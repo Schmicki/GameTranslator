@@ -103,48 +103,6 @@ cleanupName:
 	free(name);
 }
 
-static void TrimOverlaySetStyleDefault(int iconSize)
-{
-	GuiSetStyle(DEFAULT, TEXT_SIZE, iconSize);
-	GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, 0x00000000);
-	GuiSetStyle(DEFAULT, TEXT_COLOR_FOCUSED, 0x00000000);
-	GuiSetStyle(DEFAULT, BACKGROUND_COLOR, 0xFFFFFFFF);
-	GuiSetStyle(DEFAULT, BORDER_COLOR_NORMAL, 0x000000FF);
-	GuiSetStyle(DEFAULT, BORDER_COLOR_FOCUSED, 0x000000FF);
-	GuiSetStyle(DEFAULT, BORDER_COLOR_PRESSED, 0x000000FF);
-	GuiSetStyle(DEFAULT, BORDER_COLOR_DISABLED, 0x000000FF);
-	GuiSetStyle(DEFAULT, LINE_COLOR, 0x777777FF);
-
-	GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_NORMAL, 0xFFFFFFFF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_FOCUSED, 0xFFFFFFFF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_PRESSED, 0xFFFFFFFF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_DISABLED, 0xFFFFFFFF);
-
-	GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, 0xFFFFFFFF);
-	GuiSetStyle(BUTTON, BORDER_COLOR_NORMAL, 0xFFFFFFFF);
-	GuiSetStyle(BUTTON, BASE_COLOR_FOCUSED, 0xccecffFF);
-	GuiSetStyle(BUTTON, BORDER_COLOR_FOCUSED, 0xccecffFF);
-	GuiSetStyle(BUTTON, BASE_COLOR_PRESSED, 0x8bd1fcFF);
-	GuiSetStyle(BUTTON, BORDER_COLOR_PRESSED, 0x8bd1fcFF);
-}
-
-static void TrimOverlaySetStyleInput(int iconSize)
-{
-
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_NORMAL, 0x777777FF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_FOCUSED, 0x777777FF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_PRESSED, 0x777777FF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_DISABLED, 0x777777FF);
-
-	GuiSetStyle(TEXTBOX, BASE_COLOR_NORMAL, 0xFFFFFFFF);
-	GuiSetStyle(TEXTBOX, BASE_COLOR_FOCUSED, 0xFFFFFFFF);
-	GuiSetStyle(TEXTBOX, BASE_COLOR_PRESSED, 0xFFFFFFFF);
-	GuiSetStyle(TEXTBOX, BASE_COLOR_DISABLED, 0xFFFFFFFF);
-
-	GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
-}
-
 int GuiTrimOverlay(FileManagerState* state, TrimOverlayState* trim, Rectangle bounds)
 {
 	const int textSize = (int)(gIconSize * gScale);
@@ -163,7 +121,8 @@ int GuiTrimOverlay(FileManagerState* state, TrimOverlayState* trim, Rectangle bo
 	char inputText[16];
 	int edit = trim->edit;
 
-	TrimOverlaySetStyleDefault(textSize);
+	GuiSetStyleDefault();
+	GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
 
 	/* Draw background */
 	itmp = (int)item.y + buttonSize + gPadding * 2;
@@ -192,6 +151,7 @@ int GuiTrimOverlay(FileManagerState* state, TrimOverlayState* trim, Rectangle bo
 	if (GuiIconButtonEx(item, "Cancel", gIcons, gIconSize, gPadding, ICON_CUSTOM_CLOSE, gScale))
 	{
 		CloseTrimOverlay(state, trim);
+		GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
 		return 1;
 	}
 
@@ -202,18 +162,21 @@ int GuiTrimOverlay(FileManagerState* state, TrimOverlayState* trim, Rectangle bo
 		TrimFile(trim);
 		ReloadFilesAndTypes(state);
 		CloseTrimOverlay(state, trim);
+		GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
 		return 1;
 	}
 
 	/* Draw back trim input */
+	GuiSetStyleTextboxOutlined();
+	GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
+
 	item.x = itmp + (float)gPadding;
 	item.y -= item.height + (float)gPadding;
 	item.width = (float)(windowWidth - gPadding * 2);
 	inputText[IntegerToString(trim->back, inputText)] = 0;
 
-	TrimOverlaySetStyleInput(textSize);
 	GuiSetTooltip("Number of bytes to cut from back of file");
-	edit = GuiTextBox(item, inputText, 16, edit == 2) ? (edit == 2 ? 0 : 2) : edit;
+	edit = GuiTextBox(item, inputText, textSize, edit == 2) ? (edit == 2 ? 0 : 2) : edit;
 
 	trim->back = TextToInteger(inputText);
 
@@ -222,7 +185,7 @@ int GuiTrimOverlay(FileManagerState* state, TrimOverlayState* trim, Rectangle bo
 	inputText[IntegerToString(trim->front, inputText)] = 0;
 
 	GuiSetTooltip("Number of bytes to cut from front of file");
-	edit = GuiTextBox(item, inputText, 16, edit == 1) ? (edit == 1 ? 0 : 1) : edit;
+	edit = GuiTextBox(item, inputText, textSize, edit == 1) ? (edit == 1 ? 0 : 1) : edit;
 
 	trim->front = TextToInteger(inputText);
 	trim->edit = edit;

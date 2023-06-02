@@ -347,11 +347,7 @@ int GuiListMenu(Vector2 position, const char** names, int count, int* scroll)
     float screenHeight = (float)GetScreenHeight();
     float screenWidth = (float)GetScreenWidth();
 
-    GuiSetStyle(LISTVIEW, BORDER_COLOR_NORMAL, 0x77777777);
-    GuiSetStyle(LISTVIEW, BORDER_COLOR_FOCUSED, 0x77777777);
-    GuiSetStyle(LISTVIEW, BORDER_COLOR_PRESSED, 0x77777777);
-    GuiSetStyle(LISTVIEW, BORDER_COLOR_DISABLED, 0x77777777);
-
+    GuiSetStyleListViewOutlined();
     contextBounds = ClampBounds(contextBounds, (Rectangle) {
         0.0f, 0.0f, (float)GetScreenWidth(),
             (float)GetScreenHeight()
@@ -439,13 +435,7 @@ int GuiContextMenu(FileManagerState* state, ContextMenuState* menu, Rectangle bo
 
 	GuiSetStyle(LISTVIEW, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
 	GuiSetStyle(LISTVIEW, LIST_ITEMS_HEIGHT, buttonSize);
-    GuiSetStyle(LISTVIEW, BORDER_COLOR_NORMAL, 0x77777777);
-    GuiSetStyle(LISTVIEW, BORDER_COLOR_FOCUSED, 0x77777777);
-    GuiSetStyle(LISTVIEW, BORDER_COLOR_PRESSED, 0x77777777);
-    GuiSetStyle(LISTVIEW, BORDER_COLOR_DISABLED, 0x77777777);
-
-	GuiSetStyle(DEFAULT, TEXT_SIZE, iconSize);
-	GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, 0x00000000);
+    GuiSetStyleListViewOutlined();
     
     item.y = (float)((int)item.y + buttonSize + gPadding * 2);
     item.height = (float)((int)item.height - buttonSize - gPadding * 2);
@@ -581,8 +571,6 @@ int GuiDriveSelectMenu(FileManagerState* state, DriveSelectMenuState* menu, Rect
 
     GuiSetStyle(LISTVIEW, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
     GuiSetStyle(LISTVIEW, LIST_ITEMS_HEIGHT, buttonSize);
-    GuiSetStyle(DEFAULT, TEXT_SIZE, iconSize);
-    GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, 0x00000000);
 
     result = GuiListMenu(menu->position, menu->drives.paths, menu->drives.count, &menu->scroll);
 

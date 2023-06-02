@@ -12,31 +12,6 @@ static int mouseY;
 
 /*************************************************************************************************/
 
-static void WindowControlSetStyleDefault(int iconSize)
-{
-	GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_NORMAL, 0xFFFFFFFF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_FOCUSED, 0xFFFFFFFF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_PRESSED, 0xFFFFFFFF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_DISABLED, 0xFFFFFFFF);
-
-	GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, 0xFFFFFFFF);
-	GuiSetStyle(BUTTON, BORDER_COLOR_NORMAL, 0xFFFFFFFF);
-	GuiSetStyle(BUTTON, BASE_COLOR_FOCUSED, 0xccecffFF);
-	GuiSetStyle(BUTTON, BORDER_COLOR_FOCUSED, 0xccecffFF);
-	GuiSetStyle(BUTTON, BASE_COLOR_PRESSED, 0x8bd1fcFF);
-	GuiSetStyle(BUTTON, BORDER_COLOR_PRESSED, 0x8bd1fcFF);
-
-	GuiSetStyle(LISTVIEW, BORDER_COLOR_NORMAL, 0xFFFFFF00);
-	GuiSetStyle(LISTVIEW, BORDER_COLOR_FOCUSED, 0xFFFFFF00);
-	GuiSetStyle(LISTVIEW, BORDER_COLOR_PRESSED, 0xFFFFFF00);
-	GuiSetStyle(LISTVIEW, BORDER_COLOR_DISABLED, 0xFFFFFF00);
-
-	GuiSetStyle(DEFAULT, TEXT_SIZE, iconSize);
-	GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, 0x00000000);
-	GuiSetStyle(DEFAULT, TEXT_COLOR_FOCUSED, 0x00000000);
-}
-
 static int GuiActivityTab(Rectangle bounds, const char* text, int index)
 {
 	const int iconSize = (int)(gScale * gIconSize);
@@ -45,19 +20,11 @@ static int GuiActivityTab(Rectangle bounds, const char* text, int index)
 
 	if (index == gCurrentActivity)
 	{
-		GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, 0x8bd1fcFF);
-		GuiSetStyle(BUTTON, BORDER_COLOR_NORMAL, 0x8bd1fcFF);
-		GuiSetStyle(BUTTON, BASE_COLOR_FOCUSED, 0x8bd1fcFF);
-		GuiSetStyle(BUTTON, BORDER_COLOR_FOCUSED, 0x8bd1fcFF);
-		DrawRectangle((int)bounds.x, (int)bounds.y, (int)bounds.width, (int)bounds.height,
-			GetColor(0x8bd1fcFF));
+		GuiSetStyleButtonAlwaysPressed();
 	}
 	else
 	{
-		GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, 0xFFFFFFFF);
-		GuiSetStyle(BUTTON, BORDER_COLOR_NORMAL, 0xFFFFFFFF);
-		GuiSetStyle(BUTTON, BASE_COLOR_FOCUSED, 0xccecffFF);
-		GuiSetStyle(BUTTON, BORDER_COLOR_FOCUSED, 0xccecffFF);
+		GuiSetStyleButtonDefault();
 	}
 
 	/*
@@ -69,7 +36,8 @@ static int GuiActivityTab(Rectangle bounds, const char* text, int index)
 	item.width = (float)((int)bounds.width - buttonSize - gPadding);
 	item.height = bounds.height;
 
-	if (GuiButtonEx(item, ""))
+	GuiSetTooltip(NULL);
+	if (GuiButtonEx(item, NULL))
 	{
 		gCurrentActivity = index;
 	}
@@ -94,7 +62,7 @@ static int GuiActivityTab(Rectangle bounds, const char* text, int index)
 	item.width = (float)buttonSize;
 	item.height = (float)buttonSize;
 
-	if (GuiIconButtonEx(item, "Close", gIcons, gIconSize, gPadding, ICON_CUSTOM_CLOSE, gScale))
+	if (GuiIconButtonEx(item, "Close Tab", gIcons, gIconSize, gPadding, ICON_CUSTOM_CLOSE, gScale))
 	{
 		return 1;
 	}
@@ -118,6 +86,8 @@ static void GuiActivityTabs(Rectangle bounds, int* scroll, int* rest)
 	Rectangle item;
 
 	*rest = 0;
+
+	GuiEnableTooltip();
 
 	if (tabWidth < minTabWith && gActivityCount > 0)
 	{
@@ -174,6 +144,8 @@ static void GuiActivityTabs(Rectangle bounds, int* scroll, int* rest)
 		*rest = (int)bounds.width - (fixedTabWidth * gActivityCount + 1 * (gActivityCount - 1));
 	}
 
+	GuiDisableTooltip();
+
 	tmp = 0;
 
 	/* Lock Gui if mouse is not hovering it. */
@@ -183,7 +155,7 @@ static void GuiActivityTabs(Rectangle bounds, int* scroll, int* rest)
 		GuiLock();
 	}
 
-	BeginScissorMode((int)bounds.x, (int)bounds.y, (int)bounds.width, (int)bounds.height);
+	BeginScissorMode((int)bounds.x, (int)bounds.y, (int)bounds.width, (int)(GetScreenHeight() - bounds.y));
 
 	/*
 	* Tabs
@@ -207,7 +179,7 @@ static void GuiActivityTabs(Rectangle bounds, int* scroll, int* rest)
 		if (i + 1 < gActivityCount)
 		{
 			DrawLine((int)item.x, (int)item.y, (int)item.x + 1, (int)item.y + (int)item.height,
-				GetColor(0xBBBBBBFF));
+				GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
 		}
 
 		item.x = (float)((int)item.x + 1);
@@ -227,7 +199,7 @@ int GuiWindowControl(Rectangle bounds, const char* text, int* drag, int* scroll)
 
 	Rectangle item = bounds;
 
-	WindowControlSetStyleDefault(iconSize);
+	GuiSetStyleDefault();
 	GuiEnableTooltip();
 
 	/*
@@ -292,7 +264,7 @@ int GuiWindowControl(Rectangle bounds, const char* text, int* drag, int* scroll)
 	* New Tab Button
 	*/
 
-	WindowControlSetStyleDefault(iconSize);
+	GuiSetStyleDefault();
 
 	item.x = (float)((int)item.x + (int)item.width - tmp + gPadding);
 	item.width = (float)buttonSize;

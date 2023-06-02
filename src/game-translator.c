@@ -27,16 +27,23 @@ const char* gDefaultDirectory = NULL;
 
 RenderTexture2D gTopLayerTexture = { 0 };
 
+static const char* gFontPath = "resources/Noto_Sans/NotoSans-Light.ttf";
+static unsigned char* gFontData = NULL;
+static unsigned int gFontDataSize = 0;
+
+static const char* gMonoFontPath = "resources/Noto_Sans_Mono/static/NotoSansMono-Light.ttf";
+static unsigned char* gMonoFontData = NULL;
+static unsigned int gMonoFontDataSize = 0;
+
+static const int gFontFilter = TEXTURE_FILTER_POINT;
+
 /*************************************************************************************************/
 
 int main(int argc, char** args)
 {
 	int running, drag = 0, scroll = 0;
 
-	/*
-	* Create Window
-	*/
-
+	/* Create window */
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 	SetConfigFlags(FLAG_WINDOW_UNDECORATED);
 
@@ -45,53 +52,70 @@ int main(int argc, char** args)
 	SetTargetFPS(60);
 	SetExitKey(KEY_NULL);
 
-	/*
-	* Load Global Resources
-	*/
-
+	/* Load icons */
 	gIcons = LoadTexture("resources/Icons.png");
 	SetTextureFilter(gIcons, TEXTURE_FILTER_BILINEAR);
 	gIconSize = 48;
 	gScale = 0.5f;
 	gPadding = 4;
 
-	gFont = LoadFontEx("resources/Noto_Sans/NotoSans-Light.ttf", 48, NULL, 95);
-	SetTextureFilter(gFont.texture, TEXTURE_FILTER_BILINEAR);
+	/* Load font */
+	gFontData = LoadFileData(gFontPath, &gFontDataSize);
+	gFont = LoadFontFromMemory(GetFileExtension(gFontPath), gFontData, gFontDataSize, (int)(gScale
+		* (float)gIconSize), NULL, 224);
+	SetTextureFilter(gFont.texture, gFontFilter);
 	GuiSetFont(gFont);
 
-	if (gMonoFont.texture.id != 0)
-		UnloadFont(gMonoFont);
-
-	gMonoFont = LoadFontEx("resources/Noto_Sans_Mono/static/NotoSansMono-Light.ttf", 48, NULL, 95);
-	SetTextureFilter(gMonoFont.texture, TEXTURE_FILTER_BILINEAR);
+	/* Load monospace font */
+	gMonoFontData = LoadFileData(gMonoFontPath, &gMonoFontDataSize);
+	gMonoFont = LoadFontFromMemory(GetFileExtension(gMonoFontPath), gMonoFontData, gMonoFontDataSize,
+		(int)(gScale * (float)gIconSize), NULL, 95);
+	SetTextureFilter(gMonoFont.texture, gFontFilter);
 
 	gDefaultDirectory = "C:/Users/nicke/Desktop/Game Translation/";
-
 	gTopLayerTexture = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
-
 	AddActivity(OpenFileManagerActivity(gDefaultDirectory), 0);
-
 	running = 1;
+
 	while (running && !WindowShouldClose())
 	{
-		const int iconSize = (int)(gIconSize * gScale);
-		const int buttonSize = iconSize + gPadding * 2;
+		int iconSize;
+		int buttonSize;
 		Rectangle bounds;
 
+		/* Scale UI */
 		float mouseWheel = GetMouseWheelMove();
+		float newScale = gScale;
 
 		if (mouseWheel > 0.0f && IsKeyDown(KEY_LEFT_CONTROL))
-			gScale += 0.05f;
+			newScale += 0.05f;
 
 		if (mouseWheel < 0.0f && IsKeyDown(KEY_LEFT_CONTROL))
-			gScale -= 0.05f;
+			newScale -= 0.05f;
 
-		gScale = Clamp(gScale, 0.35f, 1.0f);
+		newScale = Clamp(newScale, 0.35f, 1.0f);
+		iconSize = (int)(gIconSize * newScale);
+		buttonSize = iconSize + gPadding * 2;
 
-		/*
-		* Render target cleanup
-		*/
-		
+		/* Reload fonts */
+		if (newScale != gScale)
+		{
+			gScale = newScale;
+
+			UnloadFont(gFont);
+			UnloadFont(gMonoFont);
+
+			gFont = LoadFontFromMemory(GetFileExtension(gFontPath), gFontData, gFontDataSize,
+				iconSize, NULL, 224);
+			SetTextureFilter(gFont.texture, gFontFilter);
+			GuiSetFont(gFont);
+
+			gMonoFont = LoadFontFromMemory(GetFileExtension(gMonoFontPath), gMonoFontData,
+				gMonoFontDataSize, iconSize, NULL, 224);
+			SetTextureFilter(gMonoFont.texture, gFontFilter);
+		}
+
+		/* Render target cleanup */
 		if (gTopLayerTexture.texture.width != GetScreenWidth() &&
 			gTopLayerTexture.texture.height != GetScreenHeight())
 		{
@@ -99,17 +123,18 @@ int main(int argc, char** args)
 			gTopLayerTexture = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
 		}
 
+		/* Set default style */
+		GuiSetStyle(DEFAULT, TEXT_SIZE, iconSize);
+		GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
+
 		BeginTextureMode(gTopLayerTexture);
 		ClearBackground(BLANK);
 		EndTextureMode();
 
 		BeginDrawing();
-		ClearBackground(WHITE);
+		ClearBackground(GetColor(gBackgroundColor));
 
-		/*
-		* Activity
-		*/
-
+		/* Activity */
 		bounds.x = 0;
 		bounds.y = (float)(buttonSize + gPadding * 2);
 
@@ -136,10 +161,7 @@ int main(int argc, char** args)
 			(float)gTopLayerTexture.texture.width, (float)-gTopLayerTexture.texture.height },
 			(Vector2) { 0, 0 }, WHITE);
 
-		/*
-		* Status Bar
-		*/
-
+		/* Status Bar */
 		bounds.y = 0;
 		bounds.height = (float)GetScreenHeight();
 

@@ -161,41 +161,6 @@ static void FileViewerOnEvent(FileManagerState* state, int event, int index)
 	}
 }
 
-static void FileManagerSetStyleDefault(int iconSize)
-{
-	GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_NORMAL, 0xFFFFFFFF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_FOCUSED, 0xFFFFFFFF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_PRESSED, 0xFFFFFFFF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_DISABLED, 0xFFFFFFFF);
-
-	GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, 0xFFFFFFFF);
-	GuiSetStyle(BUTTON, BORDER_COLOR_NORMAL, 0xFFFFFFFF);
-	GuiSetStyle(BUTTON, BASE_COLOR_FOCUSED, 0xccecffFF);
-	GuiSetStyle(BUTTON, BORDER_COLOR_FOCUSED, 0xccecffFF);
-	GuiSetStyle(BUTTON, BASE_COLOR_PRESSED, 0x8bd1fcFF);
-	GuiSetStyle(BUTTON, BORDER_COLOR_PRESSED, 0x8bd1fcFF);
-
-	GuiSetStyle(LISTVIEW, BORDER_COLOR_NORMAL, 0xFFFFFF00);
-	GuiSetStyle(LISTVIEW, BORDER_COLOR_FOCUSED, 0xFFFFFF00);
-	GuiSetStyle(LISTVIEW, BORDER_COLOR_PRESSED, 0xFFFFFF00);
-	GuiSetStyle(LISTVIEW, BORDER_COLOR_DISABLED, 0xFFFFFF00);
-
-	GuiSetStyle(DEFAULT, TEXT_SIZE, iconSize);
-	GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, 0x00000000);
-	GuiSetStyle(DEFAULT, TEXT_COLOR_FOCUSED, 0x00000000);
-	GuiSetStyle(DEFAULT, BACKGROUND_COLOR, 0xFFFFFFFF);
-}
-
-static void FileViewerSetStyleRename(int iconSize)
-{
-	GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_NORMAL, 0x777777FF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_FOCUSED, 0x777777FF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_PRESSED, 0x777777FF);
-	GuiSetStyle(TEXTBOX, BORDER_COLOR_DISABLED, 0x777777FF);
-}
-
 /**************************************************************************************************
 * De/Init functions
 */
@@ -217,6 +182,8 @@ FileManagerState InitFileManager(const char* path)
 	memcpy(state.path, absolutePath, size);
 	ReloadFilesAndTypes(&state);
 
+	state.filter = NULL;
+	state.editFilter = 0;
 	state.renameIndex = -1;
 	state.rename = NULL;
 
@@ -231,6 +198,11 @@ void CloseFileManager(FileManagerState state)
 	if (state.path)
 	{
 		free(state.path);
+	}
+	
+	if (state.filter)
+	{
+		free(state.filter);
 	}
 
 	if (state.rename)
@@ -258,7 +230,7 @@ static int DrawCurrentDirectory(FileManagerState* state, Rectangle bounds)
 	itemBounds.width = (float)buttonSize;
 	itemBounds.height = (float)buttonSize;
 
-	FileManagerSetStyleDefault(iconSize);
+	GuiSetStyleDefault();
 	GuiEnableTooltip();
 
 	/*
@@ -284,7 +256,7 @@ static int DrawCurrentDirectory(FileManagerState* state, Rectangle bounds)
 	if (GuiIconButtonEx(itemBounds, "Forward", gIcons, gIconSize, gPadding,
 		ICON_CUSTOM_ARROW_RIGHT, gScale))
 	{
-		pressed = 1;
+		pressed = 2;
 	}
 
 	/*
@@ -296,7 +268,7 @@ static int DrawCurrentDirectory(FileManagerState* state, Rectangle bounds)
 	if (GuiIconButtonEx(itemBounds, "Previous Folder", gIcons, gIconSize, gPadding,
 		ICON_CUSTOM_ARROW_UP, gScale))
 	{
-		pressed = 1;
+		pressed = 3;
 		char* c = NULL;
 
 		if (c == NULL)
@@ -322,7 +294,24 @@ static int DrawCurrentDirectory(FileManagerState* state, Rectangle bounds)
 	if (GuiIconButtonEx(itemBounds, "Filter", gIcons, gIconSize, gPadding,
 		ICON_CUSTOM_SEARCH, gScale))
 	{
+		pressed = 4;
 
+		if (state->filter)
+		{
+			free(state->filter);
+			state->filter = NULL;
+			state->editFilter = 0;
+		}
+		else
+		{
+			state->filter = malloc(0x1000);
+
+			if (state->filter != NULL)
+			{
+				*state->filter = 0;
+				state->editFilter = 1;
+			}
+		}
 	}
 
 	/*
@@ -334,7 +323,7 @@ static int DrawCurrentDirectory(FileManagerState* state, Rectangle bounds)
 	if (GuiIconButtonEx(itemBounds, "Refresh", gIcons, gIconSize, gPadding,
 		ICON_CUSTOM_SYNCHRONIZE, gScale))
 	{
-		pressed = 1;
+		pressed = 5;
 		state->scroll.y = 0;
 		ReloadFilesAndTypes(state);
 	}
@@ -348,22 +337,40 @@ static int DrawCurrentDirectory(FileManagerState* state, Rectangle bounds)
 	itemBounds.width = (float)((int)itemBounds.x - ((int)bounds.x + tmp * 3 + gPadding + 1));
 	itemBounds.x = itemBounds.x - itemBounds.width - 1.0f;
 
-	if (GuiTextBox(itemBounds, state->path, iconSize, 0))
+	if (state->filter == NULL)
 	{
-		state->overlay = OpenDriveSelectMenu();
+		GuiSetStyleTextFocusable();
+		GuiTextBox(itemBounds, state->path, iconSize, 0);
+		GuiSetStyleTextDefault();
+		
+		if (!GuiIsLocked() && GuiGetState() != STATE_DISABLED && CheckCollisionPointRec(
+			GetMousePosition(), itemBounds) && IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))
+		{
+			state->overlay = OpenDriveSelectMenu();
+		}
+	}
+	else if (state->filter != NULL)
+	{
+		int edit = state->editFilter;
+
+		GuiSetStyleTextboxOutlined();
+		edit = GuiTextBox(itemBounds, state->filter, iconSize, state->editFilter) ? (edit == 1 ? 0 : 1) :
+			edit;
+		GuiSetStyleTextboxDefault();
+
+		if (pressed == 4)
+			edit = 1;
+
+		state->editFilter = edit;
 	}
 
-	/*
-	* Draw Text Border
-	*/
+	/* Draw Text Border */
+	itemBounds.width = (float)((int)itemBounds.width + buttonSize + 2);
 
-	itemBounds.x -= 1.0f;
-	itemBounds.width = (float)((int)itemBounds.width + buttonSize + 3);
-	itemBounds.height = (float)((int)itemBounds.height + 1);
+	/*DrawRectangleLinesEx(itemBounds, GuiGetStyle(TEXTBOX, BORDER_WIDTH), GetColor(GuiGetStyle(
+		DEFAULT, LINE_COLOR)));*/
 
-	DrawRectangleLinesEx(itemBounds, 1, GetColor(0xAAAAAAFF));
-
-	return pressed;
+	return pressed != 0;
 }
 
 static int FileViewerButton(FileManagerState* state, Rectangle bounds, int index)
@@ -436,10 +443,10 @@ static int FileViewerButton(FileManagerState* state, Rectangle bounds, int index
 				label.width = Clamp(MeasureTextEx(gFont, name, (float)iconSize, (float)GuiGetStyle(DEFAULT,
 					TEXT_SPACING)).x + iconSize, (float)(buttonSize * 3), label.width);
 
-				FileViewerSetStyleRename(iconSize);
+				GuiSetStyleTextboxOutlined(iconSize);
 				DrawRectangleRec(label, GetColor(0xFFFFFFFF));
 				GuiTextBox(label, name, 0x1000 - (int)strlen(name), 1);
-				FileManagerSetStyleDefault(iconSize);
+				GuiSetStyleTextboxDefault(iconSize);
 
 				drawLabel = 0;
 			}
@@ -468,7 +475,7 @@ static void DrawFileViewer(FileManagerState* state, Rectangle bounds)
 	Rectangle view;
 	Rectangle content;
 
-	FileManagerSetStyleDefault(iconSize);
+	GuiSetStyleDefault();
 
 	/* Scroll Panel */
 
