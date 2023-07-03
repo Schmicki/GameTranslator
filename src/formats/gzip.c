@@ -122,23 +122,23 @@ int FormatGZipUnpack(const char* src, int offset, char* dst)
 	return 1;
 }
 
-void FormatGZipUnpackHere(FileManagerState* state, int index)
+void FormatGZipUnpackHere(ExplorerState* state, int index)
 {
 	const char* path;
 
 	for (int i = 0; i < (int)state->files.count; i++)
 	{
-		if (state->selected[i] && state->formats[i] == &formatGZip)
+		if (state->selected[i] && state->files.formats[i] == &formatGZip)
 		{
 			path = state->files.paths[i];
 			FormatGZipUnpack(path, 0, state->path);
 		}
 	}
 
-	ReloadFilesAndTypes(state);
+	ExplorerReload(state);
 }
 
-void FormatGZipUnpackToFolder(FileManagerState* state, int index)
+void FormatGZipUnpackToFolder(ExplorerState* state, int index)
 {
 	FileFormat* format = NULL;
 	char* path;
@@ -154,7 +154,7 @@ void FormatGZipUnpackToFolder(FileManagerState* state, int index)
 
 	for (int i = 0; i < (int)state->files.count; i++)
 	{
-		if (state->selected[i] && state->formats[i] == &formatGZip)
+		if (state->selected[i] && state->files.formats[i] == &formatGZip)
 		{
 			path = state->files.paths[i];
 			length = (int)strlen(path) + 1;
@@ -169,7 +169,7 @@ void FormatGZipUnpackToFolder(FileManagerState* state, int index)
 
 			CreateFolder(noext);
 			FormatGZipUnpack(src, 0, noext);
-			ReloadFilesAndTypes(state);
+			ExplorerReload(state);
 		}
 	}
 

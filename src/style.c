@@ -54,19 +54,27 @@ void GuiSetStyleTextFocusable()
 void GuiSetStyleButtonDefault()
 {
 	GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, gBackgroundColor);
-	GuiSetStyle(BUTTON, BORDER_COLOR_NORMAL, gBackgroundColor);
 	GuiSetStyle(BUTTON, BASE_COLOR_FOCUSED, gFocusedColor);
-	GuiSetStyle(BUTTON, BORDER_COLOR_FOCUSED, gFocusedColor);
 	GuiSetStyle(BUTTON, BASE_COLOR_PRESSED, gPressedColor);
+	GuiSetStyle(BUTTON, BASE_COLOR_DISABLED, gBackgroundColor);
+
+	GuiSetStyle(BUTTON, BORDER_COLOR_NORMAL, gBackgroundColor);
+	GuiSetStyle(BUTTON, BORDER_COLOR_FOCUSED, gFocusedColor);
 	GuiSetStyle(BUTTON, BORDER_COLOR_PRESSED, gPressedColor);
+	GuiSetStyle(BUTTON, BORDER_COLOR_DISABLED, gBackgroundColor);
 }
 
 void GuiSetStyleButtonAlwaysPressed()
 {
 	GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, gPressedColor);
-	GuiSetStyle(BUTTON, BORDER_COLOR_NORMAL, gPressedColor);
 	GuiSetStyle(BUTTON, BASE_COLOR_FOCUSED, gPressedColor);
+	GuiSetStyle(BUTTON, BASE_COLOR_DISABLED, gPressedColor);
+	GuiSetStyle(BUTTON, BASE_COLOR_DISABLED, gPressedColor);
+
+	GuiSetStyle(BUTTON, BORDER_COLOR_NORMAL, gPressedColor);
 	GuiSetStyle(BUTTON, BORDER_COLOR_FOCUSED, gPressedColor);
+	GuiSetStyle(BUTTON, BORDER_COLOR_DISABLED, gPressedColor);
+	GuiSetStyle(BUTTON, BORDER_COLOR_DISABLED, gPressedColor);
 }
 
 void GuiSetStyleTextboxDefault()

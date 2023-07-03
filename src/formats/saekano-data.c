@@ -180,24 +180,24 @@ int FormatSaekanoDataUnpack(const char* src, int offset, char* dst)
 	return 1;
 }
 
-void FormatSaekanoDataUnpackHere(FileManagerState* state, int index)
+void FormatSaekanoDataUnpackHere(ExplorerState* state, int index)
 {
 	FileFormat* format = NULL;
 	const char* path = NULL;
 
 	for (int i = 0; i < (int)state->files.count; i++)
 	{
-		if (state->selected[i] && state->formats[i] == &formatSaekanoData)
+		if (state->selected[i] && state->files.formats[i] == &formatSaekanoData)
 		{
 			path = state->files.paths[i];
 			FormatSaekanoDataUnpack(path, 0, state->path);
 		}
 	}
 
-	ReloadFilesAndTypes(state);
+	ExplorerReload(state);
 }
 
-void FormatSaekanoDataUnpackToFolder(FileManagerState* state, int index)
+void FormatSaekanoDataUnpackToFolder(ExplorerState* state, int index)
 {
 	FileFormat* format = NULL;
 	char* path = NULL;
@@ -209,7 +209,7 @@ void FormatSaekanoDataUnpackToFolder(FileManagerState* state, int index)
 
 	for (int i = 0; i < (int)state->files.count; i++)
 	{
-		if (state->selected[i] && state->formats[i] == &formatSaekanoData)
+		if (state->selected[i] && state->files.formats[i] == &formatSaekanoData)
 		{
 			int length;
 
@@ -228,7 +228,7 @@ void FormatSaekanoDataUnpackToFolder(FileManagerState* state, int index)
 		}
 	}
 	
-	ReloadFilesAndTypes(state);
+	ExplorerReload(state);
 	free(dst);
 }
 

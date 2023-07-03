@@ -14,7 +14,7 @@ typedef struct TrimOverlayState
 
 /*************************************************************************************************/
 
-void CloseTrimOverlay(FileManagerState* state, TrimOverlayState* trim)
+void CloseTrimOverlay(ExplorerState* state, TrimOverlayState* trim)
 {
 	free(trim->path);
 	free(trim);
@@ -103,7 +103,7 @@ cleanupName:
 	free(name);
 }
 
-int GuiTrimOverlay(FileManagerState* state, TrimOverlayState* trim, Rectangle bounds)
+int GuiTrimOverlay(ExplorerState* state, TrimOverlayState* trim, Rectangle bounds)
 {
 	const int textSize = (int)(gIconSize * gScale);
 	const int buttonSize = textSize + gPadding * 2;
@@ -160,7 +160,7 @@ int GuiTrimOverlay(FileManagerState* state, TrimOverlayState* trim, Rectangle bo
 	if (GuiIconButtonEx(item, "Trim", gIcons, gIconSize, gPadding, ICON_CUSTOM_TRIM, gScale))
 	{
 		TrimFile(trim);
-		ReloadFilesAndTypes(state);
+		ExplorerReload(state);
 		CloseTrimOverlay(state, trim);
 		GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
 		return 1;
@@ -201,10 +201,10 @@ int GuiTrimOverlay(FileManagerState* state, TrimOverlayState* trim, Rectangle bo
 	return 0;
 }
 
-Overlay OpenTrimOverlay(const char* path)
+ExplorerOverlay OpenTrimOverlay(const char* path)
 {
 	TrimOverlayState* state;
-	Overlay overlay = { NULL, NULL };
+	ExplorerOverlay overlay = { NULL, NULL };
 	int len;
 
 	if ((state = malloc(sizeof(TrimOverlayState))) == NULL)

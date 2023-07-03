@@ -1,5 +1,5 @@
 #include "status-bar.h"
-#include "tools/file-explorer/file-explorer.h"
+#include "tools/explorer/explorer.h"
 
 /*************************************************************************************************/
 
@@ -274,7 +274,7 @@ int GuiWindowControl(Rectangle bounds, const char* text, int* drag, int* scroll)
 
 	if (GuiIconButtonEx(item, "New Tab", gIcons, gIconSize, gPadding, ICON_CUSTOM_PLUS, gScale))
 	{
-		AddActivity(OpenFileManagerActivity(gDefaultDirectory), gActivityCount);
+		AddActivity(OpenExplorer(gDefaultDirectory), gActivityCount);
 		gCurrentActivity = gActivityCount - 1;
 	}
 	

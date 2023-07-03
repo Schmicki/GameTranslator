@@ -75,7 +75,7 @@ enum CustomIcons
 
 /*************************************************************************************************/
 
-#define MAX_ACTIVITIES 0x40
+#define MAX_ACTIVITIES 0x100
 
 typedef struct Activity
 {

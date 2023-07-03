@@ -2,7 +2,7 @@
 #include "platform/filesystem.h"
 
 #include "tools/hex-viewer.h"
-#include "tools/file-explorer/trim-overlay.h"
+#include "trim-overlay.h"
 
 #include "formats/default.h"
 #include "formats/folder.h"
@@ -49,11 +49,11 @@ typedef struct CustomActionFormatMenuState
 * Actions
 */
 
-void ActionCustomAction(FileManagerState* state, int index)
+void ActionCustomAction(ExplorerState* state, int index)
 {
 }
 
-void ActionCopy(FileManagerState* state, int index)
+void ActionCopy(ExplorerState* state, int index)
 {
     char* path;
     int length;
@@ -63,20 +63,12 @@ void ActionCopy(FileManagerState* state, int index)
 
     path = state->files.paths[index];
     length = (int)strlen(path) + 1;
-
-    if (state->copyTarget)
-        free(state->copyTarget);
-
-    state->copyTarget = malloc(length);
-
-    if (state->copyTarget == NULL)
-        return;
 
     memcpy(state->copyTarget, path, length);
     state->copyFlags = 0;
 }
 
-void ActionCut(FileManagerState* state, int index)
+void ActionCut(ExplorerState* state, int index)
 {
     char* path;
     int length;
@@ -87,19 +79,11 @@ void ActionCut(FileManagerState* state, int index)
     path = state->files.paths[index];
     length = (int)strlen(path) + 1;
 
-    if (state->copyTarget)
-        free(state->copyTarget);
-
-    state->copyTarget = malloc(length);
-
-    if (state->copyTarget == NULL)
-        return;
-
     memcpy(state->copyTarget, path, length);
     state->copyFlags = 1;
 }
 
-void ActionPaste(FileManagerState* state, int index)
+void ActionPaste(ExplorerState* state, int index)
 {
     char* path;
     char* name;
@@ -164,25 +148,24 @@ void ActionPaste(FileManagerState* state, int index)
 
     if (state->copyFlags == 1)
     {
-        free(state->copyTarget);
-        state->copyTarget = NULL;
+        state->copyTarget[0] = 0;
     }
 
-    ReloadFilesAndTypes(state);
+    ExplorerReload(state);
 
 clean:
     free(path);
 }
 
-void ActionRename(FileManagerState* state, int index)
+void ActionRename(ExplorerState* state, int index)
 {
     if (index == -1)
         return;
 
-    FileManagerBeginRename(state, index);
+    ExplorerBeginRename(state, index);
 }
 
-void ActionDelete(FileManagerState* state, int index)
+void ActionDelete(ExplorerState* state, int index)
 {
     for (int i = 0; i < (int)state->files.count; i++)
     {
@@ -201,10 +184,10 @@ void ActionDelete(FileManagerState* state, int index)
         }
     }
 
-    ReloadFilesAndTypes(state);
+    ExplorerReload(state);
 }
 
-void ActionAddToArchive(FileManagerState* state, int index)
+void ActionAddToArchive(ExplorerState* state, int index)
 {
     for (int i = 0; i < (int)state->files.count; i++)
     {
@@ -213,22 +196,22 @@ void ActionAddToArchive(FileManagerState* state, int index)
     }
 }
 
-void ActionHexEditor(FileManagerState* state, int index)
+void ActionHexEditor(ExplorerState* state, int index)
 {
     int i = index;
 
-    if (i != -1 && state->formats[i]->type != FILE_TYPE_FOLDER)
+    if (i != -1 && state->files.formats[i]->type != FILE_TYPE_FOLDER)
     {
         AddActivity(OpenHexEditor(state->files.paths[i]), gCurrentActivity + 1);
         gCurrentActivity = gActivityCount - 1;
     }
 }
 
-void ActionTrim(FileManagerState* state, int index)
+void ActionTrim(ExplorerState* state, int index)
 {
     int i = index;
 
-    if (i != -1 && state->formats[i]->type != FILE_TYPE_FOLDER)
+    if (i != -1 && state->files.formats[i]->type != FILE_TYPE_FOLDER)
     {
         state->overlay = OpenTrimOverlay(state->files.paths[i]);
     }
@@ -238,7 +221,7 @@ void ActionTrim(FileManagerState* state, int index)
 * Helper functions
 */
 
-static ContextActionList LoadContextActions(FileManagerState* state)
+static ContextActionList LoadContextActions(ExplorerState* state)
 {
     ContextActionList actions = { 0, 0, NULL, NULL };
     FileFormat* format = NULL;
@@ -246,7 +229,7 @@ static ContextActionList LoadContextActions(FileManagerState* state)
     if (state->files.count == 0 || (state->selected[state->lastSelected] == 0.0))
         format = &formatFolder;
     else
-        format = state->formats[state->lastSelected];
+        format = state->files.formats[state->lastSelected];
 
     actions.capacity = MAX_CONTEXT_ACTIONS;
     actions.count = 0;
@@ -273,7 +256,7 @@ static void UnloadContextActions(ContextActionList actions)
     }
 }
 
-static int ContextMenuOnAction(FileManagerState* state, ContextMenuState* menu, int index)
+static int ContextMenuOnAction(ExplorerState* state, ContextMenuState* menu, int index)
 {
     ContextAction action = menu->actions.functions[index];
     int result = 1;
@@ -297,7 +280,7 @@ static int ContextMenuOnAction(FileManagerState* state, ContextMenuState* menu, 
     return result;
 }
 
-static int ContextMenuOnFormat(FileManagerState* state, ContextMenuState* menu, int index)
+static int ContextMenuOnFormat(ExplorerState* state, ContextMenuState* menu, int index)
 {
     ContextActionList actions = { 0, 0, NULL, NULL };
     FileFormat* format = menu->formats.formats[index];
@@ -365,7 +348,7 @@ int GuiListMenu(Vector2 position, const char** names, int count, int* scroll)
 * ContextMenu functions
 */
 
-void CloseContextMenu(FileManagerState* state, ContextMenuState* menu)
+void CloseContextMenu(ExplorerState* state, ContextMenuState* menu)
 {
     if (state->overlay.data == menu)
     {
@@ -380,7 +363,7 @@ void CloseContextMenu(FileManagerState* state, ContextMenuState* menu)
     free(menu);
 }
 
-int GuiContextMenu(FileManagerState* state, ContextMenuState* menu, Rectangle bounds)
+int GuiContextMenu(ExplorerState* state, ContextMenuState* menu, Rectangle bounds)
 {
     const int iconSize = (int)(gIconSize * gScale);
     const int buttonSize = iconSize + gPadding * 2;
@@ -485,11 +468,12 @@ int GuiContextMenu(FileManagerState* state, ContextMenuState* menu, Rectangle bo
     {
         ActionDelete(state, menu->index);
         result = -2;
+        goto end;
     }
 
     max.x = (float)((int)max.x + buttonSize + gPadding);
 
-    if (menu->index >= 0 && (state->formats[menu->index] != &formatFolder))
+    if (menu->index >= 0 && (state->files.formats[menu->index] != &formatFolder))
     {
         if (GuiIconButtonEx(max, "Trim", gIcons, gIconSize, gPadding, ICON_CUSTOM_TRIM, gScale))
         {
@@ -528,9 +512,9 @@ end:
     return 1;
 }
 
-Overlay OpenContextMenu(FileManagerState* state, int index)
+ExplorerOverlay OpenContextMenu(ExplorerState* state, int index)
 {
-    Overlay overlay = { NULL, NULL };
+    ExplorerOverlay overlay = { NULL, NULL };
     ContextMenuState* menu = malloc(sizeof(ContextMenuState));
 
     if (menu == NULL)
@@ -551,7 +535,7 @@ Overlay OpenContextMenu(FileManagerState* state, int index)
 * DriveMenu functions
 */
 
-void CloseDriveSelectMenu(FileManagerState* state, DriveSelectMenuState* menu)
+void CloseDriveSelectMenu(ExplorerState* state, DriveSelectMenuState* menu)
 {
     if (state->overlay.data == menu)
     {
@@ -563,7 +547,7 @@ void CloseDriveSelectMenu(FileManagerState* state, DriveSelectMenuState* menu)
     free(menu);
 }
 
-int GuiDriveSelectMenu(FileManagerState* state, DriveSelectMenuState* menu, Rectangle bounds)
+int GuiDriveSelectMenu(ExplorerState* state, DriveSelectMenuState* menu, Rectangle bounds)
 {
     const int iconSize = (int)(gIconSize * gScale);
     const int buttonSize = iconSize + gPadding * 2;
@@ -584,16 +568,16 @@ int GuiDriveSelectMenu(FileManagerState* state, DriveSelectMenuState* menu, Rect
         int len = (int)strlen(menu->drives.paths[result]);
         memcpy(state->path, menu->drives.paths[result], len);
         state->path[len - 1] = 0;
-        ReloadFilesAndTypes(state);
+        ExplorerReload(state);
     }
 
     CloseDriveSelectMenu(state, menu);
     return result != -2;
 }
 
-Overlay OpenDriveSelectMenu()
+ExplorerOverlay OpenDriveSelectMenu()
 {
-    Overlay overlay = { NULL, NULL };
+    ExplorerOverlay overlay = { NULL, NULL };
     DriveSelectMenuState* menu = malloc(sizeof(DriveSelectMenuState));
 
     if (menu == NULL)

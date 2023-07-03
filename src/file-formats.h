@@ -19,11 +19,11 @@
 
 /*************************************************************************************************/
 
-typedef struct FileManagerState FileManagerState;
+typedef struct ExplorerState ExplorerState;
 
 typedef struct Overlay Overlay;
 
-typedef void (*ContextAction)(FileManagerState* state, int clickedIndex);
+typedef void (*ContextAction)(struct ExplorerState* state, int clickedIndex);
 
 /*************************************************************************************************/
 

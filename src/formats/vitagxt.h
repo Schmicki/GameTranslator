@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tools/file-explorer/file-explorer.h"
+#include "tools/explorer/explorer.h"
 
 int FormatIsVitaGxt(const char* path, const char* name, const char* extension, const char* data,
 	int length);

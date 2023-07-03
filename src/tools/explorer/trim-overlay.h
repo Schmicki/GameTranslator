@@ -1,7 +1,7 @@
 #pragma once
 
-#include "file-explorer.h"
+#include "explorer.h"
 
 /*************************************************************************************************/
 
-Overlay OpenTrimOverlay(const char* path);
+ExplorerOverlay OpenTrimOverlay(const char* path);

@@ -490,7 +490,7 @@ cleanupFile:
 	return image;
 }
 
-static void FortmatVitaGxtViewImage(FileManagerState* state, int index)
+static void FortmatVitaGxtViewImage(ExplorerState* state, int index)
 {
 	FileFormat* format = NULL;
 	const char* path = NULL;
@@ -498,9 +498,9 @@ static void FortmatVitaGxtViewImage(FileManagerState* state, int index)
 
 	int i = index;
 
-	if (i != -1 && state->formats[i]->type != FILE_TYPE_FOLDER)
+	if (i != -1 && state->files.formats[i]->type != FILE_TYPE_FOLDER)
 	{
-		format = state->formats[i];
+		format = state->files.formats[i];
 		path = state->files.paths[i];
 	}
 

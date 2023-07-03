@@ -1,56 +1,227 @@
 #include "platform/filesystem.h"
 #include "context-menu.h"
-#include "file-explorer.h"
+#include "explorer.h"
+
+/**************************************************************************************************
+* Crawler functions
+*/
+
+static void CrawlerMain(void* data)
+{
+	CrawlerState* state = (CrawlerState*)data;
+
+	while (1)
+	{
+		while (1)
+		{
+			int tmp, target, result;
+
+			FutexWait(&state->futex, 0);
+
+			tmp = AtomicLoadInteger(&state->futex);
+			target = tmp > 0 ? tmp - 1 : tmp;
+			result = AtomicCompareAndSwapInteger(&state->futex, target, tmp);
+
+			if (result == tmp && tmp != 0)
+				break;
+		}
+		
+		LockSpinLock(&state->nextLock);
+
+		state->generation = state->nextGeneration;
+		memcpy(state->path, state->nextPath, strlen(state->nextPath) + 1);
+		memcpy(state->filter, state->nextFilter, strlen(state->nextFilter) + 1);
+
+		UnlockSpinLock(&state->nextLock);
+
+		if (state->filter[0] == 0)
+		{
+			FilePathList files = LoadDirectoryFiles(state->path);
+			FileNode* first = NULL;
+			FileNode* last = NULL;
+			
+			for (int i = 0; i < (int)files.count; i++)
+			{
+				FileNode* node = malloc(sizeof(FileNode));
+
+				if (node == NULL)
+					continue;
+
+				else if (first == NULL)
+					first = node;
+
+				else
+					last->next = node;
+
+				last = node;
+
+				node->next = NULL;
+				node->generation = state->generation;
+				node->path = files.paths[i];
+				node->format = GetFileFormat(files.paths[i]);
+			}
+
+			LockSpinLock(&state->queueLock);
+			
+			if (state->last == NULL)
+				state->first = first;
+
+			else
+				state->last->next = first;
+
+			state->last = last;
+			
+			UnlockSpinLock(&state->queueLock);
+		}
+		else
+		{
+
+		}
+	}
+}
 
 /**************************************************************************************************
 * Helper functions
 */
 
-void ReloadFilesAndTypes(FileManagerState* state)
+void PullFiles(ExplorerState* state)
 {
-	if (state->files.capacity > 0)
-	{
-		UnloadDirectoryFiles(state->files);
-		free(state->formats);
-	}
+	CrawlerState* crawler = state->crawler;
+	FileNode* first;
+	FileNode* last;
+	FileNode* node;
 
-	if (state->rename)
-	{
-		free(state->rename);
-		state->rename = NULL;
-		state->renameIndex = -1;
-	}
+	LockSpinLock(&crawler->queueLock);
 
+	first = crawler->first;
+	last = crawler->last;
+
+	crawler->first = NULL;
+	crawler->last = NULL;
+
+	UnlockSpinLock(&crawler->queueLock);
+
+	node = first;
+
+	while (node != NULL)
+	{
+		FileNode* next = node->next;
+
+		if (node->generation != state->generation)
+		{
+			free(node->path);
+			free(node);
+			node = next;
+			continue;
+		}
+
+		if (state->files.count == state->files.capacity)
+		{
+			FileList list;
+			double* selected;
+
+			list.capacity = state->files.capacity * 2;
+			list.count = state->files.count;
+			
+			if (list.capacity == 0)
+				list.capacity = 64;
+
+			list.paths = malloc(sizeof(char*) * list.capacity);
+
+			if (list.paths == NULL)
+				goto fail;
+
+			list.formats = malloc(sizeof(FileFormat*) * list.capacity);
+
+			if (list.formats == NULL)
+			{
+				free(list.paths);
+				goto fail;
+			}
+
+			selected = malloc(sizeof(double) * list.capacity);
+
+			if (selected == NULL)
+			{
+				free(list.paths);
+				free(list.formats);
+				goto fail;
+			}
+
+			memcpy(list.paths, state->files.paths, state->files.count * sizeof(char*));
+			memcpy(list.formats, state->files.formats, state->files.count * sizeof(FileFormat*));
+			memcpy(selected, state->selected, state->files.count * sizeof(double));
+
+			free(state->files.paths);
+			free(state->files.formats);
+			free(state->selected);
+			state->files = list;
+			state->selected = selected;
+		}
+
+		state->files.paths[state->files.count] = node->path;
+		state->files.formats[state->files.count] = node->format;
+		state->selected[state->files.count] = 0.0;
+		state->files.count++;
+
+		free(node);
+		node = next;
+		continue;
+
+	fail:
+		free(node->path);
+		free(node);
+		node = next;
+	}
+}
+
+void ExplorerReload(ExplorerState* state)
+{
+	CrawlerState* crawler = state->crawler;
+
+	state->reName[0] = 0;
 	state->lastSelected = 0;
 
-	state->files = LoadDirectoryFiles(state->path);
-
-	size_t formatsSize = sizeof(FileFormat*) * state->files.capacity;
-	size_t selectedSize = sizeof(double) * state->files.capacity;
-
-	state->formats = malloc(formatsSize + selectedSize);
-	state->selected = (double*)((char*)state->formats + formatsSize);
-
-	for (int i = 0; i < (int)state->files.count; i++)
+	for (int i = 0; i < state->files.count; i++)
 	{
-		state->formats[i] = GetFileFormat(state->files.paths[i]);
-		state->selected[i] = 0.0;
+		free(state->files.paths[i]);
+	}
+
+	free(state->files.paths);
+	free(state->files.formats);
+	free(state->selected);
+
+	state->files.capacity = 0;
+	state->files.count = 0;
+	state->files.paths = NULL;
+	state->files.formats = NULL;
+	state->selected = NULL;
+	state->generation++;
+
+	LockSpinLock(&crawler->nextLock);
+
+	memcpy(crawler->nextPath, state->path, strlen(state->path) + 1);
+	crawler->nextFilter[0] = 0;
+	crawler->nextGeneration = state->generation;
+
+	UnlockSpinLock(&crawler->nextLock);
+
+	while (1)
+	{
+		int tmp, result;
+
+		tmp = AtomicLoadInteger(&crawler->futex);
+		result = AtomicCompareAndSwapInteger(&crawler->futex, tmp + 1, tmp);
+
+		if (result == tmp)
+		{
+			FutexWakeSingle(&crawler->futex);
+			break;
+		}
 	}
 }
 
-static void DeselectAllFiles(FileManagerState* state)
-{
-	for (int iter = 0; iter < (int)state->files.count; iter++)
-		state->selected[iter] = 0.0;
-}
-
-static char IsFileDoubleClicked(FileManagerState* state, int i)
-{
-	double selected = state->selected[i];
-	return selected > 0.0 && (GetTime() - selected) <= 0.4;
-}
-
-int FileManagerGetSelectedFile(FileManagerState* state)
+int ExplorerGetSelectedFile(ExplorerState* state)
 {
 	if (state->selected[state->lastSelected])
 		return state->lastSelected;
@@ -62,46 +233,52 @@ int FileManagerGetSelectedFile(FileManagerState* state)
 	return -1;
 }
 
-void FileManagerBeginRename(FileManagerState* state, int index)
+void ExplorerBeginRename(ExplorerState* state, int index)
 {
 	const char* path;
 
-	state->rename = malloc(0x1000);
-
-	if (state->rename == NULL)
-		return;
-
 	path = state->files.paths[index];
-	memcpy(state->rename, path, strlen(path) + 1);
+	memcpy(state->reName, path, strlen(path) + 1);
 
 	state->renameIndex = index;
 }
 
-void FileManagerEndRename(FileManagerState* state)
+void ExplorerEndRename(ExplorerState* state)
 {
 	int length;
 	char* path;
 
-	if (rename(state->files.paths[state->renameIndex], state->rename) == -1)
+	if (rename(state->files.paths[state->renameIndex], state->reName) == -1)
 		goto clean;
 
-	length = (int)strlen(state->rename) + 1;
+	length = (int)strlen(state->reName) + 1;
 	path = malloc(length);
 
 	if (path == NULL)
 		goto clean;
 
-	memcpy(path, state->rename, length);
+	memcpy(path, state->reName, length);
 	free(state->files.paths[state->renameIndex]);
 	state->files.paths[state->renameIndex] = path;
 
 clean:
-	free(state->rename);
-	state->rename = NULL;
+	*state->reName = 0;
 	state->renameIndex = -1;
 }
 
-static void FileViewerOnEvent(FileManagerState* state, int event, int index)
+static void DeselectAllFiles(ExplorerState* state)
+{
+	for (int iter = 0; iter < (int)state->files.count; iter++)
+		state->selected[iter] = 0.0;
+}
+
+static char IsFileDoubleClicked(ExplorerState* state, int i)
+{
+	double selected = state->selected[i];
+	return selected > 0.0 && (GetTime() - selected) <= 0.4;
+}
+
+static void FileViewerOnEvent(ExplorerState* state, int event, int index)
 {
 	double time;
 
@@ -138,7 +315,7 @@ static void FileViewerOnEvent(FileManagerState* state, int event, int index)
 
 			memcpy(state->path, state->files.paths[index], strlen(state->files.paths[index]) + 1);
 			state->scroll.y = 0;
-			ReloadFilesAndTypes(state);
+			ExplorerReload(state);
 		}
 		break;
 
@@ -162,65 +339,10 @@ static void FileViewerOnEvent(FileManagerState* state, int event, int index)
 }
 
 /**************************************************************************************************
-* De/Init functions
+* Gui functions
 */
 
-FileManagerState InitFileManager(const char* path)
-{
-	FileManagerState state = { NULL };
-
-	if (!DirectoryExists(path))
-		return state;
-	
-	char absolutePath[0x400];
-	int size = GetAbsolutePath(path, 0x400, absolutePath) + 1;
-	StringReplaceChar(absolutePath, '\\', '/');
-
-	if ((state.path = malloc(0x1000)) == NULL)
-		return state;
-
-	memcpy(state.path, absolutePath, size);
-	ReloadFilesAndTypes(&state);
-
-	state.filter = NULL;
-	state.editFilter = 0;
-	state.renameIndex = -1;
-	state.rename = NULL;
-
-	state.copyFlags = 0;
-	state.copyTarget = NULL;
-
-	return state;
-}
-
-void CloseFileManager(FileManagerState state)
-{
-	if (state.path)
-	{
-		free(state.path);
-	}
-	
-	if (state.filter)
-	{
-		free(state.filter);
-	}
-
-	if (state.rename)
-	{
-		free(state.rename);
-	}
-
-	if (state.copyTarget)
-	{
-		free(state.copyTarget);
-	}
-}
-
-/**************************************************************************************************
-* Draw functions
-*/
-
-static int DrawCurrentDirectory(FileManagerState* state, Rectangle bounds)
+static int DrawCurrentDirectory(ExplorerState* state, Rectangle bounds)
 {
 	const int iconSize = (int)(gIconSize * gScale);
 	const int buttonSize = iconSize + gPadding * 2;
@@ -281,7 +403,7 @@ static int DrawCurrentDirectory(FileManagerState* state, Rectangle bounds)
 		{
 			*c = 0;
 			state->scroll.y = 0;
-			ReloadFilesAndTypes(state);
+			ExplorerReload(state);
 		}
 	}
 
@@ -296,21 +418,17 @@ static int DrawCurrentDirectory(FileManagerState* state, Rectangle bounds)
 	{
 		pressed = 4;
 
-		if (state->filter)
+		if (state->showFilter)
 		{
-			free(state->filter);
-			state->filter = NULL;
+			*state->filter = 0;
+			state->showFilter = 0;
 			state->editFilter = 0;
 		}
 		else
 		{
-			state->filter = malloc(0x1000);
-
-			if (state->filter != NULL)
-			{
-				*state->filter = 0;
-				state->editFilter = 1;
-			}
+			*state->filter = 0;
+			state->showFilter = 1;
+			state->editFilter = 1;
 		}
 	}
 
@@ -325,7 +443,7 @@ static int DrawCurrentDirectory(FileManagerState* state, Rectangle bounds)
 	{
 		pressed = 5;
 		state->scroll.y = 0;
-		ReloadFilesAndTypes(state);
+		ExplorerReload(state);
 	}
 
 	GuiDisableTooltip();
@@ -337,19 +455,19 @@ static int DrawCurrentDirectory(FileManagerState* state, Rectangle bounds)
 	itemBounds.width = (float)((int)itemBounds.x - ((int)bounds.x + tmp * 3 + gPadding + 1));
 	itemBounds.x = itemBounds.x - itemBounds.width - 1.0f;
 
-	if (state->filter == NULL)
+	if (!state->showFilter)
 	{
 		GuiSetStyleTextFocusable();
 		GuiTextBox(itemBounds, state->path, iconSize, 0);
 		GuiSetStyleTextDefault();
-		
+
 		if (!GuiIsLocked() && GuiGetState() != STATE_DISABLED && CheckCollisionPointRec(
 			GetMousePosition(), itemBounds) && IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))
 		{
 			state->overlay = OpenDriveSelectMenu();
 		}
 	}
-	else if (state->filter != NULL)
+	else
 	{
 		int edit = state->editFilter;
 
@@ -373,7 +491,7 @@ static int DrawCurrentDirectory(FileManagerState* state, Rectangle bounds)
 	return pressed != 0;
 }
 
-static int FileViewerButton(FileManagerState* state, Rectangle bounds, int index)
+static int FileViewerButton(ExplorerState* state, Rectangle bounds, int index)
 {
 	const int iconSize = (int)(gIconSize * gScale);
 	const int buttonSize = iconSize + gPadding * 2;
@@ -402,7 +520,7 @@ static int FileViewerButton(FileManagerState* state, Rectangle bounds, int index
 		state->selected[index] = 0.0;
 
 		if (state->renameIndex != -1 && index == state->renameIndex)
-			FileManagerEndRename(state);
+			ExplorerEndRename(state);
 	}
 
 	event = GuiButtonEx(bounds, "");
@@ -422,7 +540,7 @@ static int FileViewerButton(FileManagerState* state, Rectangle bounds, int index
 		state->selected[index] = GetTime();
 
 		if (state->renameIndex != -1 && index != state->renameIndex)
-			FileManagerEndRename(state);
+			ExplorerEndRename(state);
 	}
 
 	if (state->selected[index] > 0.0)
@@ -434,17 +552,16 @@ static int FileViewerButton(FileManagerState* state, Rectangle bounds, int index
 		{
 			if (IsKeyPressed(KEY_ENTER))
 			{
-				FileManagerEndRename(state);
+				ExplorerEndRename(state);
 			}
 			else
 			{
-				char* name = (char*)GetFileName(state->rename);
+				char* name = (char*)GetFileName(state->reName);
 
-				label.width = Clamp(MeasureTextEx(gFont, name, (float)iconSize, (float)GuiGetStyle(DEFAULT,
-					TEXT_SPACING)).x + iconSize, (float)(buttonSize * 3), label.width);
+				label.width = Clamp(MeasureTextEx(gFont, name, (float)iconSize, (float)GuiGetStyle(
+					DEFAULT, TEXT_SPACING)).x + iconSize, (float)(buttonSize * 3), label.width);
 
 				GuiSetStyleTextboxOutlined(iconSize);
-				DrawRectangleRec(label, GetColor(0xFFFFFFFF));
 				GuiTextBox(label, name, 0x1000 - (int)strlen(name), 1);
 				GuiSetStyleTextboxDefault(iconSize);
 
@@ -458,13 +575,13 @@ static int FileViewerButton(FileManagerState* state, Rectangle bounds, int index
 		GuiLabel(label, GetFileName(state->files.paths[index]));
 	}
 
-	GuiDrawCustomIcon(gIcons, gIconSize, state->formats[index]->icon, (int)icon.x,
+	GuiDrawCustomIcon(gIcons, gIconSize, state->files.formats[index]->icon, (int)icon.x,
 		(int)icon.y, gScale, RAYWHITE);
 
 	return result;
 }
 
-static void DrawFileViewer(FileManagerState* state, Rectangle bounds)
+static void DrawFileViewer(ExplorerState* state, Rectangle bounds)
 {
 	const int iconSize = (int)(gIconSize * gScale);
 	const int buttonSize = iconSize + gPadding * 2;
@@ -545,10 +662,13 @@ static void DrawFileViewer(FileManagerState* state, Rectangle bounds)
 	FileViewerOnEvent(state, event, index);
 }
 
-void GuiFileManager(FileManagerState* state, Rectangle bounds)
+void ExplorerDraw(Activity* activity, Rectangle bounds)
 {
+	ExplorerState* state = (ExplorerState*)activity->data;
 	int unlock = 0;
 	Rectangle itemBounds;
+
+	PullFiles(state);
 
 	BeginTextureMode(gTopLayerTexture);
 
@@ -589,20 +709,9 @@ void GuiFileManager(FileManagerState* state, Rectangle bounds)
 	GuiUnlock();
 }
 
-/**************************************************************************************************
-* Activity functions
-*/
-
-void FileManagerActivityDraw(Activity* activity, Rectangle bounds)
+void CloseExplorer(Activity* activity)
 {
-	GuiFileManager((FileManagerState*)activity->data, bounds);
-}
-
-void CloseFileManagerActivity(Activity* activity)
-{
-	FileManagerState* state = (FileManagerState*)activity->data;
-
-	CloseFileManager(*state);
+	free(activity->data);
 
 	activity->name = NULL;
 	activity->data = NULL;
@@ -610,22 +719,75 @@ void CloseFileManagerActivity(Activity* activity)
 	activity->Close = NULL;
 }
 
-Activity OpenFileManagerActivity(const char* path)
+Activity OpenExplorer(const char* path)
 {
 	Activity activity = { NULL, NULL, NULL, NULL };
+	ExplorerState* explorer;
+	CrawlerState* crawler;
+	char absolutePath[MAX_PATH_LENGTH];
+	int size;
 
-	if (path == NULL)
+	if (path == NULL || !DirectoryExists(path))
 		return activity;
 
-	activity.data = malloc(sizeof(FileManagerState));
+	explorer = malloc(sizeof(ExplorerState));
 
-	if (activity.data == NULL)
+	if (explorer == NULL)
 		return activity;
 
-	activity.name = "File Manager";
-	*((FileManagerState*)activity.data) = InitFileManager(path);
-	activity.Draw = &FileManagerActivityDraw;
-	activity.Close = &CloseFileManagerActivity;
+	crawler = malloc(sizeof(CrawlerState));
+
+	if (crawler == NULL)
+	{
+		free(explorer);
+		return activity;
+	}
+
+	size = GetAbsolutePath(path, MAX_PATH_LENGTH, absolutePath) + 1;
+	StringReplaceChar(absolutePath, '\\', '/');
+	memcpy(explorer->path, absolutePath, size);
+	memcpy(crawler->path, absolutePath, size);
+
+	crawler->generation = 0;
+	/* path is set above */
+	crawler->filter[0] = 0;
+	crawler->futex = 0;
+	crawler->nextLock = 0;
+	crawler->nextGeneration = 0;
+	crawler->nextPath[0] = 0;
+	crawler->nextFilter[0] = 0;
+	crawler->queueLock = 0;
+	crawler->first = NULL;
+	crawler->last = NULL;
+
+	explorer->generation = 0;
+	/* path is set above */
+	explorer->filter[0] = 0;
+	explorer->reName[0] = 0;
+	explorer->copyTarget[0] = 0;
+	explorer->files.capacity = 0;
+	explorer->files.count = 0;
+	explorer->files.paths = NULL;
+	explorer->files.formats = NULL;
+	explorer->selected = NULL;
+	explorer->lastSelected = 0;
+	explorer->showFilter = 0;
+	explorer->editFilter = 0;
+	explorer->renameIndex = -1;
+	explorer->copyFlags = 0;
+	explorer->overlay.Draw = NULL;
+	explorer->overlay.data = NULL;
+	explorer->scroll.x = 0.0f;
+	explorer->scroll.y = 0.0f;
+	explorer->crawler = crawler;
+	explorer->crawlerThread = InitThread(&CrawlerMain, crawler);
+
+	ExplorerReload(explorer);
+
+	activity.name = "Explorer";
+	activity.data = explorer;
+	activity.Draw = &ExplorerDraw;
+	activity.Close = &CloseExplorer;
 
 	return activity;
 }

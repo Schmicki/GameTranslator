@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tools/file-explorer/file-explorer.h"
+#include "tools/explorer/explorer.h"
 
 /*************************************************************************************************/
 

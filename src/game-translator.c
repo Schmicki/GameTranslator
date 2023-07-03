@@ -1,5 +1,6 @@
 #include "status-bar.h"
-#include "tools/file-explorer/file-explorer.h"
+#include "tools/explorer/explorer.h"
+#include "tools/explorer/explorer.h"
 #include "string-tools.h"
 #include "platform/threadsafe.h"
 
@@ -74,7 +75,8 @@ int main(int argc, char** args)
 
 	gDefaultDirectory = "C:/Users/nicke/Desktop/Game Translation/";
 	gTopLayerTexture = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
-	AddActivity(OpenFileManagerActivity(gDefaultDirectory), 0);
+	//AddActivity(OpenFileManagerActivity(gDefaultDirectory), 0);
+	AddActivity(OpenExplorer(gDefaultDirectory), 0);
 	running = 1;
 
 	while (running && !WindowShouldClose())
