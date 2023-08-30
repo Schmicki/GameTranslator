@@ -7,16 +7,16 @@ const int gTextColor = 0x000000FF;
 const int gBackgroundColor = 0xFFFFFFFF;
 const int gFocusedColor = 0xccecffFF;
 const int gPressedColor = 0x8bd1fcFF;
-const int gLineColor = 0x777777FF;
+const int gLineColor = 0x555555FF;
 
 #else
 
 /* Dark Theme */
-const int gTextColor = 0xF0F0F0FF;
-const int gBackgroundColor = 0x272727FF;
-const int gFocusedColor = 0x454545FF;
-const int gPressedColor = 0x303C45FF;
-const int gLineColor = 0x777777FF;
+const int gTextColor = 0xFFFFFFFF;
+const int gBackgroundColor = 0x282828FF;
+const int gFocusedColor = 0x555555FF;
+const int gPressedColor = 0x2B70C8FF;
+const int gLineColor = 0x555555FF;
 
 #endif
 
